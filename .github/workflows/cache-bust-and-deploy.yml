@@ -1,0 +1,41 @@
+name: Deploy and Cache Bust
+
+on:
+  push:
+    branches:
+      - main  # ⬅️ IMPORTANT: Check that 'main' is the branch you use for GitHub Pages
+    paths:
+      - 'index.html' # Only run the action when index.html is changed
+
+jobs:
+  cache-bust-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+        # Fetch all history to get a proper SHA
+        with:
+          fetch-depth: 0
+
+      - name: Get short commit SHA for versioning
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Inject Cache Buster into index.html
+        run: |
+          # Replace the placeholder text with the unique commit SHA
+          sed -i "s/CACHE_BUSTER_PLACEHOLDER/${{ steps.vars.outputs.sha_short }}/" index.html
+          echo "Injected version: ${{ steps.vars.outputs.sha_short }}"
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # This uploads your modified index.html (with the new version) for deployment
+          path: '.' 
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
