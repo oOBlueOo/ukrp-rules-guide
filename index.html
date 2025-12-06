@@ -433,7 +433,7 @@
         <div class="modal-content bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700 w-full max-w-lg relative">
             <button onclick="closeModal('ruleModal')" class="absolute top-4 right-4 text-slate-400 hover:text-white">✕</button>
             <h2 id="modalTitle" class="text-2xl font-bold text-white mb-6 border-b border-slate-700 pb-2">Manage Rule</h2>
-            <form onsubmit="handleRuleSubmit(event)" class="space-y-4">
+            <form onsubmit="handleRuleSubmit(event)" class="space-y-6">
                 <input type="hidden" id="ruleId">
                 <input type="hidden" id="ruleDocId"> <!-- Firestore Doc ID -->
                 
@@ -489,7 +489,6 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // CONFIG & INIT
-        // UPDATED: Dynamically checks for environment config to fix "Permission Denied" errors
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
             apiKey: "AIzaSyDy_79SDkFox2548J7JMEBQN2KVTw7-wHw",
             authDomain: "rules-875fd.firebaseapp.com",
@@ -504,10 +503,11 @@
         const analytics = getAnalytics(app);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        // Ensure appId is a string and handle potential undefined env var gracefully
         const appId = (typeof __app_id !== 'undefined' && __app_id) ? String(__app_id) : 'default-ukrp-app';
         
-        const rulesColPath = ['artifacts', appId, 'public', 'data', 'ukrp_rules']; // Firestore path
+        // STRICT PATH for public data: artifacts/{appId}/public/data/{collectionName}
+        // This collection reference is crucial for database access
+        const rulesCollection = collection(db, 'artifacts', appId, 'public', 'data', 'ukrp_rules');
 
         // --- HARDCODED BASE RULES (Read-Only) ---
         window.staticBaseRules = [
@@ -605,21 +605,27 @@
         // AUTH & LISTENER
         async function init() {
             try {
-                // FIX: When using a custom Firebase project, the system-provided __initial_auth_token
-                // is invalid (causes auth/custom-token-mismatch). We must use signInAnonymously instead.
-                // Ensure "Anonymous" is enabled in your Firebase Console > Authentication > Sign-in method.
+                // FIXED AUTH FLOW: If custom token fails, we MUST fallback to anonymous
+                // otherwise user is left in limbo with permission errors
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
+                    try {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } catch (tokenError) {
+                        console.warn("Custom token failed, falling back to anonymous auth:", tokenError);
+                        await signInAnonymously(auth);
+                    }
                 } else {
                     await signInAnonymously(auth);
                 }
             } catch(e) { 
-                console.error("Auth failed", e); 
+                console.error("Critical Auth Failure", e); 
             }
 
             onAuthStateChanged(auth, (user) => {
                 if(user) {
-                    const q = query(collection(db, ...rulesColPath));
+                    console.log("Authenticated as:", user.uid);
+                    
+                    const q = query(rulesCollection);
                     onSnapshot(q, (snapshot) => {
                         fetchedRules = [];
                         snapshot.forEach((docSnap) => {
@@ -639,11 +645,13 @@
                         if (window.filterRules) window.filterRules();
                     }, (error) => {
                         console.warn("Firestore access restricted (ReadOnly Mode):", error.message);
-                        // Even if fetch fails, show base rules and notify user
+                        
+                        // Fallback to static rules
                         window.rulesData = window.staticBaseRules;
                         
                         const banner = document.getElementById('dbStatusBanner');
                         if(banner) {
+                            banner.querySelector('span').textContent = "Read-Only Mode: " + error.message;
                             banner.classList.remove('hidden');
                             banner.classList.add('flex');
                         }
@@ -678,9 +686,11 @@
 
             try {
                 if (docId) {
-                    await updateDoc(doc(db, ...rulesColPath, docId), ruleData);
+                    // Update existing in the same collection
+                    await updateDoc(doc(rulesCollection, docId), ruleData);
                 } else {
-                    await addDoc(collection(db, ...rulesColPath), ruleData);
+                    // Add new to the collection
+                    await addDoc(rulesCollection, ruleData);
                 }
                 window.closeModal('ruleModal');
             } catch (err) {
@@ -694,7 +704,7 @@
         window.deleteRule = async function(docId) {
             if(confirm("Are you sure you want to delete this rule? This cannot be undone.")) {
                 try {
-                    await deleteDoc(doc(db, ...rulesColPath, docId));
+                    await deleteDoc(doc(rulesCollection, docId));
                 } catch(err) {
                     alert("Error deleting: " + err.message + "\n\n(Check your database permissions)");
                 }
