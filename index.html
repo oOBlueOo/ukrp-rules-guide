@@ -78,6 +78,17 @@
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
         }
 
+        /* Review Card Styling */
+        .review-card {
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease;
+        }
+        .review-card:hover {
+            background: rgba(30, 41, 59, 0.8);
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
         /* Dynamic Border Colors */
         .general-rule { border-left-color: var(--color-general); }
         .whitelist-rule { border-left-color: var(--color-whitelist); }
@@ -147,10 +158,15 @@
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .rating-star:hover { transform: scale(1.2); }
+        /* Applied when a star is permanently selected or currently hovered */
         .rating-star.selected, .rating-star.hover-active {
             color: #F59E0B;
             text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
         }
+        
+        /* Display Stars (Non-interactive) */
+        .display-star { color: #334155; font-size: 1.1rem; }
+        .display-star.filled { color: #F59E0B; text-shadow: 0 0 5px rgba(245, 158, 11, 0.3); }
 
         /* Page Transitions */
         .page-section {
@@ -223,6 +239,8 @@
                 <div class="hidden md:flex items-center space-x-8">
                     <button onclick="switchPage('rules')" id="nav-rules" class="nav-btn active text-sm font-semibold uppercase tracking-wider py-2">Rule Book</button>
                     <button onclick="switchPage('reviews')" id="nav-reviews" class="nav-btn text-sm font-semibold uppercase tracking-wider py-2">Reviews & Community</button>
+                    <!-- Admin Panel Nav Link (Hidden by default) -->
+                    <button onclick="switchPage('admin')" id="nav-admin" class="nav-btn hidden text-sm font-semibold uppercase tracking-wider py-2 text-blue-400">Admin Panel</button>
                     
                     <div class="h-6 w-px bg-slate-700 mx-2"></div>
 
@@ -231,11 +249,6 @@
                     </button>
                     <div id="adminPanel" class="hidden items-center space-x-3">
                         <span class="text-xs text-green-400 font-mono bg-green-400/10 px-2 py-1 rounded border border-green-400/20">ADMIN MODE</span>
-                        
-                        <button onclick="openRuleModal()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg shadow-blue-600/20 transition-all hover:scale-105 flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                            Add Rule
-                        </button>
                         <button onclick="logout()" class="text-red-400 hover:text-red-300 text-sm font-medium">Logout</button>
                     </div>
                 </div>
@@ -263,9 +276,6 @@
                 </div>
 
                 <div class="bg-slate-900/50 p-1 rounded-xl border border-slate-700/50 flex shadow-2xl relative overflow-hidden group">
-                    <!-- Pointer events none fixed -->
-                    <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    
                     <div class="pl-4 flex items-center justify-center pointer-events-none">
                         <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </div>
@@ -308,8 +318,8 @@
             
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 
-                <!-- Left Column: Community Links -->
-                <div class="lg:col-span-5 space-y-6">
+                <!-- Left Column: Community Links & List of Reviews -->
+                <div class="lg:col-span-5 space-y-8">
                     <div class="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl p-8 text-center">
                         <h2 class="text-3xl font-bold text-white mb-2">Join the Community</h2>
                         <p class="text-slate-400 mb-8">Connect with other players, get support, or support the server.</p>
@@ -339,24 +349,27 @@
                         </div>
                     </div>
 
-                    <!-- Placeholder for image or announcement -->
-                    <div class="rounded-2xl overflow-hidden border border-slate-700 shadow-2xl">
-                        <img src="https://i.gyazo.com/fad0f3f014c5988a6ac3218d7409e33f.png" alt="Map Preview" class="w-full h-48 object-cover opacity-80 hover:opacity-100 transition-opacity">
-                        <div class="p-4 bg-slate-800">
-                            <h3 class="text-white font-bold">Explore the City</h3>
-                            <p class="text-sm text-slate-400">Familiarize yourself with the zones.</p>
+                    <!-- Reviews List -->
+                    <div class="bg-slate-900/50 rounded-2xl p-6 border border-slate-700/50">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xl font-bold text-white">What Players Say</h3>
+                            <span class="text-xs text-slate-400 bg-slate-800 px-2 py-1 rounded">Last 20</span>
+                        </div>
+                        <div id="reviewsList" class="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+                            <!-- Reviews injected here -->
+                            <div class="text-center text-slate-500 py-8">Loading reviews...</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Right Column: Review Form -->
                 <div class="lg:col-span-7">
-                    <div class="bg-slate-800/80 backdrop-blur border border-slate-700 rounded-2xl p-8 relative overflow-hidden">
+                    <div class="bg-slate-800/80 backdrop-blur border border-slate-700 rounded-2xl p-8 relative overflow-hidden sticky top-24">
                         <!-- Decorative bg element -->
                         <div class="absolute -top-10 -right-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl"></div>
 
                         <h3 class="text-2xl font-bold text-white mb-2 relative z-10">Leave a Review</h3>
-                        <p class="text-slate-400 mb-8 relative z-10">Share your experience with the UKRP community. Reviews are posted to our public channels.</p>
+                        <p class="text-slate-400 mb-8 relative z-10">Share your experience with the UKRP community. Reviews are posted to our public channels and Discord.</p>
                         
                         <form id="reviewForm" onsubmit="submitReview(event)" class="space-y-6 relative z-10">
                             
@@ -401,6 +414,93 @@
             </div>
         </div>
 
+        <!-- =======================
+             PAGE: ADMIN PANEL
+             ======================= -->
+        <div id="page-admin" class="page-section">
+            <div class="max-w-4xl mx-auto space-y-8">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-3xl font-bold text-white">Admin Dashboard</h2>
+                    <span class="px-3 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded-lg text-sm font-mono">AUTHORIZED</span>
+                </div>
+
+                <!-- Admin Action Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div onclick="openRuleModal()" class="bg-slate-800 p-6 rounded-xl border border-slate-700 hover:border-blue-500 cursor-pointer transition-colors group">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center text-blue-400 group-hover:text-white group-hover:bg-blue-600 transition">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Add New Rule</h3>
+                                <p class="text-slate-400 text-sm">Create a new rule entry in the database.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div onclick="switchPage('rules'); window.activeCategoryFilter='All'; filterRules();" class="bg-slate-800 p-6 rounded-xl border border-slate-700 hover:border-purple-500 cursor-pointer transition-colors group">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center text-purple-400 group-hover:text-white group-hover:bg-purple-600 transition">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Manage Rules</h3>
+                                <p class="text-slate-400 text-sm">Edit or delete existing rules via the Rule Book.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Discord Settings -->
+                <div class="bg-slate-800 border border-slate-700 rounded-2xl p-8">
+                    <div class="flex items-center space-x-3 mb-6 border-b border-slate-700 pb-4">
+                        <svg class="w-8 h-8 text-[#5865F2]" fill="currentColor" viewBox="0 0 24 24"><path d="M19.27 5.33C17.94 4.71 16.5 4.26 15 4a.09.09 0 0 0-.07.03c-.18.33-.39.76-.53 1.09a16.09 16.09 0 0 0-4.8 0c-.14-.34-.35-.76-.54-1.09c-.01-.02-.04-.03-.07-.03c-1.5.26-2.93.71-4.27 1.33c-.01 0-.02.01-.03.02c-2.72 4.07-3.47 8.03-3.1 11.95c0 .02.01.04.03.05c1.8 1.32 3.53 2.12 5.2 2.65c.03.01.06 0 .07-.02c.4-.55.76-1.13 1.07-1.74c.02-.04 0-.08-.04-.09c-.57-.22-1.11-.48-1.64-.78c-.04-.02-.04-.08.01-.11c.11-.08.22-.17.33-.25c.02-.02.05-.02.07-.01c3.44 1.57 7.15 1.57 10.55 0c.02-.01.05-.01.07.01c.11.09.22.17.33.26c.04.03.04.09-.01.11c-.53.31-1.07.57-1.64.78c-.04.01-.05.06-.04.09c.32.61.68 1.19 1.07 1.74c.03.01.06.02.09.01c1.72-.53 3.48-1.33 5.3-2.65c.02-.01.03-.03.03-.05c.44-4.53-.73-9.21-3.1-11.95c-.01-.01-.02-.02-.04-.02zM8.52 14.91c-1.03 0-1.89-.95-1.89-2.12s.84-2.12 1.89-2.12c1.06 0 1.9.96 1.89 2.12c0 1.17-.85 2.12-1.89 2.12zm6.97 0c-1.03 0-1.89-.95-1.89-2.12s.84-2.12 1.89-2.12c1.06 0 1.9.96 1.89 2.12c0 1.17-.85 2.12-1.89 2.12z"/></svg>
+                        <h3 class="text-xl font-bold text-white">Discord Integration Settings</h3>
+                    </div>
+
+                    <form onsubmit="handleSettingsSubmit(event)" class="space-y-6">
+                        <div>
+                            <label class="block text-slate-400 text-xs uppercase font-bold mb-2">Webhook URL</label>
+                            <input type="password" id="adminDiscordWebhook" placeholder="https://discord.com/api/webhooks/..." 
+                                class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono text-sm">
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-slate-400 text-xs uppercase font-bold mb-2">Bot Name</label>
+                                <input type="text" id="adminBotName" placeholder="UKRP Reviews" 
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 text-xs uppercase font-bold mb-2">Embed Title</label>
+                                <input type="text" id="adminEmbedTitle" placeholder="New Review Received" 
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 text-xs uppercase font-bold mb-2">Embed Color (Hex)</label>
+                                <div class="flex items-center space-x-2">
+                                    <input type="color" id="adminEmbedColorPicker" class="w-10 h-10 rounded border-none bg-transparent cursor-pointer" onchange="document.getElementById('adminEmbedColor').value = this.value">
+                                    <input type="text" id="adminEmbedColor" placeholder="#3B82F6" 
+                                        class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-blue-500 font-mono">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 text-xs uppercase font-bold mb-2">Footer Text</label>
+                                <input type="text" id="adminEmbedFooter" placeholder="UKRP Community Bot" 
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-blue-500">
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-700 flex justify-end">
+                            <button type="submit" id="saveSettingsBtn" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-lg font-bold shadow-lg shadow-blue-600/20 transition-transform hover:scale-105">
+                                Save Configuration
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <!-- Admin Login Modal -->
@@ -424,6 +524,43 @@
                 </div>
                 <div id="loginError" class="text-red-400 text-sm text-center hidden bg-red-400/10 py-2 rounded">Invalid credentials</div>
                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Review Modal -->
+    <div id="editReviewModal" class="modal fixed inset-0 z-[100] hidden items-center justify-center">
+        <div class="modal-content bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700 w-full max-w-md relative">
+            <button onclick="closeModal('editReviewModal')" class="absolute top-4 right-4 text-slate-400 hover:text-white">✕</button>
+            <h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-700 pb-2">Edit Review</h2>
+            <form onsubmit="handleEditReviewSubmit(event)" class="space-y-6">
+                <input type="hidden" id="editReviewId">
+                
+                <div>
+                    <label class="block text-slate-400 text-xs uppercase font-bold mb-1">Character Name</label>
+                    <input type="text" id="editReviewName" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white outline-none">
+                </div>
+                
+                <div>
+                    <label class="block text-slate-400 text-xs uppercase font-bold mb-1">Rating</label>
+                    <select id="editReviewRating" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white outline-none">
+                        <option value="1">1 Star</option>
+                        <option value="2">2 Stars</option>
+                        <option value="3">3 Stars</option>
+                        <option value="4">4 Stars</option>
+                        <option value="5">5 Stars</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 text-xs uppercase font-bold mb-1">Review Content</label>
+                    <textarea id="editReviewContent" required rows="5" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white outline-none"></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" onclick="closeModal('editReviewModal')" class="text-slate-400 hover:text-white px-4 py-2 text-sm font-medium">Cancel</button>
+                    <button type="submit" id="saveReviewBtn" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-bold">Save Changes</button>
+                </div>
             </form>
         </div>
     </div>
@@ -485,7 +622,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
-        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, writeBatch, orderBy, limit, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // CONFIG & INIT
@@ -506,8 +643,9 @@
         const appId = (typeof __app_id !== 'undefined' && __app_id) ? String(__app_id) : 'default-ukrp-app';
         
         // STRICT PATH for public data: artifacts/{appId}/public/data/{collectionName}
-        // This collection reference is crucial for database access
         const rulesCollection = collection(db, 'artifacts', appId, 'public', 'data', 'ukrp_rules');
+        const reviewsCollection = collection(db, 'artifacts', appId, 'public', 'data', 'ukrp_reviews');
+        const settingsCollection = collection(db, 'artifacts', appId, 'public', 'data', 'ukrp_settings');
 
         // --- HARDCODED BASE RULES (Read-Only) ---
         window.staticBaseRules = [
@@ -601,12 +739,11 @@
         ];
         
         let fetchedRules = [];
+        let fetchedReviews = [];
 
         // AUTH & LISTENER
         async function init() {
             try {
-                // FIXED AUTH FLOW: If custom token fails, we MUST fallback to anonymous
-                // otherwise user is left in limbo with permission errors
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     try {
                         await signInWithCustomToken(auth, __initial_auth_token);
@@ -623,43 +760,47 @@
 
             onAuthStateChanged(auth, (user) => {
                 if(user) {
-                    console.log("Authenticated as:", user.uid);
-                    
-                    const q = query(rulesCollection);
-                    onSnapshot(q, (snapshot) => {
+                    // Rules Listener
+                    const qRules = query(rulesCollection);
+                    onSnapshot(qRules, (snapshot) => {
                         fetchedRules = [];
                         snapshot.forEach((docSnap) => {
                             fetchedRules.push({ docId: docSnap.id, ...docSnap.data() });
                         });
                         
-                        // MERGE: Base Rules (Read-Only) + Fetched Rules (Editable)
-                        // Sort by customId
                         const allRules = [...window.staticBaseRules, ...fetchedRules].sort((a, b) => (a.customId || 0) - (b.customId || 0));
-                        
                         window.rulesData = allRules;
                         
-                        // Hide banner if connection successful
                         const banner = document.getElementById('dbStatusBanner');
                         if(banner) banner.classList.add('hidden');
                         
                         if (window.filterRules) window.filterRules();
                     }, (error) => {
-                        console.warn("Firestore access restricted (ReadOnly Mode):", error.message);
-                        
-                        // Fallback to static rules
+                        console.warn("Rules read restricted:", error.message);
                         window.rulesData = window.staticBaseRules;
-                        
                         const banner = document.getElementById('dbStatusBanner');
                         if(banner) {
                             banner.querySelector('span').textContent = "Read-Only Mode: " + error.message;
                             banner.classList.remove('hidden');
                             banner.classList.add('flex');
                         }
-                        
                         if (window.filterRules) window.filterRules();
                     });
+
+                    // Reviews Listener
+                    const qReviews = query(reviewsCollection);
+                    onSnapshot(qReviews, (snapshot) => {
+                        fetchedReviews = [];
+                        snapshot.forEach((doc) => fetchedReviews.push({ id: doc.id, ...doc.data() }));
+                        // Sort by timestamp desc
+                        fetchedReviews.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                        renderReviews(fetchedReviews);
+                    }, (error) => {
+                        console.warn("Reviews read failed:", error);
+                        document.getElementById('reviewsList').innerHTML = `<div class="text-center text-slate-500 py-4">Unable to load reviews.</div>`;
+                    });
+
                 } else {
-                     // If auth fails/not ready, at least show base rules
                     window.rulesData = window.staticBaseRules;
                     if (window.filterRules) window.filterRules();
                 }
@@ -667,7 +808,49 @@
         }
         init();
 
-        // GLOBAL FUNCTIONS FOR UI
+        // --- REVIEWS RENDERER ---
+        window.renderReviews = function(reviews) {
+            const list = document.getElementById('reviewsList');
+            if(!list) return;
+            
+            list.innerHTML = '';
+            
+            if(reviews.length === 0) {
+                list.innerHTML = `<div class="text-center text-slate-500 py-8 italic">No reviews yet. Be the first!</div>`;
+                return;
+            }
+
+            // Show last 20
+            reviews.slice(0, 20).forEach(review => {
+                const date = new Date(review.timestamp).toLocaleDateString();
+                const stars = "★".repeat(review.rating) + "☆".repeat(5 - review.rating);
+                
+                let adminControls = '';
+                if(window.isAdmin) {
+                    adminControls = `
+                        <div class="mt-3 pt-3 border-t border-slate-700/50 flex justify-end space-x-3">
+                            <button onclick="openEditReviewModal('${review.id}')" class="text-xs text-blue-400 hover:text-white font-medium transition">Edit</button>
+                            <button onclick="deleteReview('${review.id}')" class="text-xs text-red-400 hover:text-white font-medium transition">Delete</button>
+                        </div>
+                    `;
+                }
+
+                const div = document.createElement('div');
+                div.className = "review-card p-4 rounded-xl";
+                div.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="font-bold text-white text-sm">${review.name}</div>
+                        <div class="text-xs text-slate-500">${date}</div>
+                    </div>
+                    <div class="mb-2 text-yellow-500 tracking-widest text-sm">${stars}</div>
+                    <p class="text-slate-300 text-sm leading-relaxed break-words">"${review.content}"</p>
+                    ${adminControls}
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        // --- GLOBAL UI HELPERS ---
         window.handleRuleSubmit = async function(e) {
             e.preventDefault();
             const btn = document.getElementById('saveRuleBtn');
@@ -686,10 +869,8 @@
 
             try {
                 if (docId) {
-                    // Update existing in the same collection
                     await updateDoc(doc(rulesCollection, docId), ruleData);
                 } else {
-                    // Add new to the collection
                     await addDoc(rulesCollection, ruleData);
                 }
                 window.closeModal('ruleModal');
@@ -706,12 +887,249 @@
                 try {
                     await deleteDoc(doc(rulesCollection, docId));
                 } catch(err) {
-                    alert("Error deleting: " + err.message + "\n\n(Check your database permissions)");
+                    alert("Error deleting: " + err.message);
+                }
+            }
+        };
+        
+        // --- REVIEW MANAGEMENT (ADMIN) ---
+        window.deleteReview = async function(docId) {
+            if(confirm("Delete this review?")) {
+                try {
+                    await deleteDoc(doc(reviewsCollection, docId));
+                } catch(err) {
+                    alert("Error deleting review: " + err.message);
                 }
             }
         };
 
-        // UI SCRIPTS
+        window.openEditReviewModal = function(docId) {
+            const review = fetchedReviews.find(r => r.id === docId);
+            if(!review) return;
+
+            document.getElementById('editReviewId').value = docId;
+            document.getElementById('editReviewName').value = review.name;
+            document.getElementById('editReviewRating').value = review.rating;
+            document.getElementById('editReviewContent').value = review.content;
+
+            const m = document.getElementById('editReviewModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+        };
+
+        window.handleEditReviewSubmit = async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('saveReviewBtn');
+            btn.textContent = "Saving...";
+            btn.disabled = true;
+
+            const docId = document.getElementById('editReviewId').value;
+            const name = document.getElementById('editReviewName').value;
+            const rating = parseInt(document.getElementById('editReviewRating').value);
+            const content = document.getElementById('editReviewContent').value;
+
+            try {
+                await updateDoc(doc(reviewsCollection, docId), {
+                    name, rating, content
+                });
+                window.closeModal('editReviewModal');
+            } catch(err) {
+                alert("Error updating review: " + err.message);
+            } finally {
+                btn.textContent = "Save Changes";
+                btn.disabled = false;
+            }
+        };
+
+        // --- SETTINGS PAGE LOGIC ---
+        // This is now triggered when the Admin Page loads, or manually
+        async function loadAdminSettings() {
+            if (!window.isAdmin) return;
+            try {
+                const docRef = doc(settingsCollection, 'discord_config');
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    document.getElementById('adminDiscordWebhook').value = data.webhookUrl || '';
+                    document.getElementById('adminBotName').value = data.botName || '';
+                    document.getElementById('adminEmbedTitle').value = data.embedTitle || '';
+                    document.getElementById('adminEmbedColor').value = data.embedColor || '';
+                    document.getElementById('adminEmbedFooter').value = data.embedFooter || '';
+                    // Update color picker visual
+                    if(data.embedColor) document.getElementById('adminEmbedColorPicker').value = data.embedColor;
+                }
+            } catch(e) {
+                console.warn("Could not load settings:", e);
+            }
+        }
+
+        window.handleSettingsSubmit = async function(e) {
+            e.preventDefault();
+            if(!window.isAdmin) return;
+            
+            const btn = document.getElementById('saveSettingsBtn');
+            btn.textContent = "Saving...";
+            btn.disabled = true;
+            
+            const config = {
+                webhookUrl: document.getElementById('adminDiscordWebhook').value.trim(),
+                botName: document.getElementById('adminBotName').value.trim(),
+                embedTitle: document.getElementById('adminEmbedTitle').value.trim(),
+                embedColor: document.getElementById('adminEmbedColor').value.trim(),
+                embedFooter: document.getElementById('adminEmbedFooter').value.trim()
+            };
+            
+            try {
+                const docRef = doc(settingsCollection, 'discord_config');
+                await setDoc(docRef, config, { merge: true });
+                alert("Settings saved successfully!");
+            } catch (e) {
+                alert("Error saving settings: " + e.message);
+            } finally {
+                btn.textContent = "Save Configuration";
+                btn.disabled = false;
+            }
+        };
+
+        // --- RATING & SUBMISSION ---
+        const stars = document.querySelectorAll('.rating-star');
+        const ratingInput = document.getElementById('selectedRating');
+        const ratingText = document.getElementById('ratingText');
+
+        stars.forEach(star => {
+            star.addEventListener('mouseover', () => {
+                const value = parseInt(star.getAttribute('data-value'));
+                updateStars(value, 'hover-active');
+                ratingText.textContent = star.getAttribute('title');
+            });
+            star.addEventListener('click', () => {
+                const value = parseInt(star.getAttribute('data-value'));
+                ratingInput.value = value;
+                updateStars(value, 'selected');
+                ratingText.textContent = star.getAttribute('title') + " - Selected";
+            });
+        });
+
+        document.getElementById('reviewRating').addEventListener('mouseleave', () => {
+            const currentValue = parseInt(ratingInput.value) || 0;
+            stars.forEach(s => s.classList.remove('hover-active'));
+            if (currentValue > 0) {
+                const selectedStar = document.querySelector(`.rating-star[data-value="${currentValue}"]`);
+                ratingText.textContent = selectedStar ? selectedStar.getAttribute('title') + " - Selected" : "";
+            } else {
+                ratingText.textContent = "";
+            }
+        });
+
+        function updateStars(value, className) {
+            stars.forEach(s => {
+                const sValue = parseInt(s.getAttribute('data-value'));
+                if (className === 'selected') {
+                    if (sValue <= value) s.classList.add('selected');
+                    else s.classList.remove('selected');
+                } else {
+                    if (sValue <= value) s.classList.add('hover-active');
+                    else s.classList.remove('hover-active');
+                }
+            });
+        }
+
+        window.submitReview = async function(e) {
+            e.preventDefault();
+            const user = auth.currentUser;
+            if (!user) {
+                alert("You must be connected to the server to submit a review.");
+                return;
+            }
+
+            const name = document.getElementById('reviewName').value;
+            const content = document.getElementById('reviewContent').value;
+            const rating = parseInt(document.getElementById('selectedRating').value);
+            const msgDiv = document.getElementById('reviewMessage');
+
+            if (!rating) {
+                msgDiv.textContent = "Please select a star rating.";
+                msgDiv.className = "text-center font-medium min-h-[24px] text-red-400";
+                return;
+            }
+
+            const btn = e.target.querySelector('button');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = "Submitting...";
+
+            try {
+                // 1. Save to Firestore
+                await addDoc(reviewsCollection, {
+                    name: name,
+                    content: content,
+                    rating: rating,
+                    timestamp: new Date().toISOString(),
+                    userId: user.uid
+                });
+
+                // 2. Send to Discord (Best Effort)
+                try {
+                    const docRef = doc(settingsCollection, 'discord_config');
+                    const docSnap = await getDoc(docRef);
+                    if(docSnap.exists() && docSnap.data().webhookUrl) {
+                        const data = docSnap.data();
+                        const webhookUrl = data.webhookUrl;
+                        
+                        // Default Fallbacks
+                        const botName = data.botName || "UKRP Reviews";
+                        const embedTitle = data.embedTitle || "New Review Received";
+                        const embedColor = data.embedColor ? parseInt(data.embedColor.replace('#', ''), 16) : 0x3B82F6;
+                        const embedFooter = data.embedFooter || "UKRP Community Bot";
+                        
+                        const payload = {
+                            username: botName,
+                            embeds: [{
+                                title: embedTitle,
+                                color: embedColor,
+                                fields: [
+                                    { name: "Player", value: name, inline: true },
+                                    { name: "Rating", value: "⭐".repeat(rating), inline: true },
+                                    { name: "Review", value: content }
+                                ],
+                                footer: { text: embedFooter },
+                                timestamp: new Date().toISOString()
+                            }]
+                        };
+
+                        await fetch(webhookUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                    }
+                } catch(webhookErr) {
+                    console.error("Discord send failed:", webhookErr);
+                }
+
+                msgDiv.textContent = "Review submitted successfully!";
+                msgDiv.className = "text-center font-medium min-h-[24px] text-green-400";
+                e.target.reset();
+                
+                ratingInput.value = "";
+                updateStars(0, 'selected');
+                ratingText.textContent = "";
+
+            } catch (error) {
+                console.error("Error submitting review:", error);
+                msgDiv.textContent = "Error submitting review. Please try again.";
+                msgDiv.className = "text-center font-medium min-h-[24px] text-red-400";
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+                setTimeout(() => { msgDiv.textContent = ""; }, 3000);
+            }
+        };
+
+        document.getElementById('reviewContent').addEventListener('input', function() {
+            document.getElementById('charCount').textContent = this.value.length;
+        });
+
+        // UI NAVIGATION & ADMIN
         window.activeCategoryFilter = 'All';
         window.isAdmin = false;
 
@@ -730,6 +1148,11 @@
             selectedPage.style.display = 'block';
             requestAnimationFrame(() => selectedPage.classList.add('active-page'));
             window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // If switching to admin, reload settings
+            if (pageName === 'admin' && window.isAdmin) {
+                loadAdminSettings();
+            }
         }
 
         window.openLoginModal = function() {
@@ -775,22 +1198,28 @@
         window.logout = function() {
             setAdminState(false);
             sessionStorage.removeItem('ukrp_admin_session');
+            switchPage('rules');
         }
 
         function setAdminState(isLoggedIn) {
             window.isAdmin = isLoggedIn;
             const loginBtn = document.getElementById('adminLoginBtn');
             const panel = document.getElementById('adminPanel');
+            const navLink = document.getElementById('nav-admin');
+
             if (isLoggedIn) {
                 loginBtn.classList.add('hidden');
                 panel.classList.remove('hidden');
                 panel.classList.add('flex');
+                navLink.classList.remove('hidden');
             } else {
                 loginBtn.classList.remove('hidden');
                 panel.classList.add('hidden');
                 panel.classList.remove('flex');
+                navLink.classList.add('hidden');
             }
             if (window.filterRules) window.filterRules();
+            if (window.renderReviews && fetchedReviews) window.renderReviews(fetchedReviews);
         }
 
         if(sessionStorage.getItem('ukrp_admin_session') === 'true') {
@@ -810,10 +1239,8 @@
             const newCheck = document.getElementById('ruleNew');
 
             if (docId) {
-                // Edit
                 const rule = window.rulesData.find(r => r.docId === docId);
                 if (!rule) return;
-                
                 titleEl.textContent = "Edit Rule";
                 docIdInput.value = rule.docId;
                 customIdInput.value = rule.customId;
@@ -822,13 +1249,10 @@
                 textInput.value = rule.text;
                 newCheck.checked = rule.new;
             } else {
-                // Add
                 titleEl.textContent = "Add New Rule";
                 docIdInput.value = "";
-                // Guess next ID from ALL rules
                 const maxId = window.rulesData.reduce((max, r) => Math.max(max, r.customId || 0), 0);
                 customIdInput.value = maxId + 1;
-                
                 catInput.value = (activeCategoryFilter !== 'All') ? activeCategoryFilter : "General";
                 titleInput.value = "";
                 textInput.value = "";
@@ -836,10 +1260,8 @@
             }
         }
 
-        // --- FILTER & RENDER ---
         window.filterRules = function() {
             if(!window.rulesData) return;
-            
             const term = document.getElementById('searchInput').value.toLowerCase().trim();
             document.getElementById('clearSearchBtn').classList.toggle('hidden', term.length === 0);
 
@@ -917,11 +1339,8 @@
                     card.className = `rule-card p-6 rounded-xl relative group ${map.class}`;
                     
                     let adminHtml = '';
-                    
-                    // Admin Logic for Editable vs Locked
                     if(window.isAdmin) {
                         if (rule.docId) {
-                            // EDITABLE (Database Rule)
                             adminHtml = `
                                 <div class="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button onclick="openRuleModal('${rule.docId}')" class="p-1.5 bg-blue-600/80 hover:bg-blue-600 rounded-md text-white transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg></button>
@@ -929,7 +1348,6 @@
                                 </div>
                             `;
                         } else {
-                            // LOCKED (Base Rule)
                             adminHtml = `
                                 <div class="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity" title="Base Rule (Cannot be edited)">
                                     <span class="p-1.5 bg-slate-700/80 rounded-md text-slate-400 cursor-not-allowed">
@@ -969,7 +1387,6 @@
             });
         }
 
-        // Search Handlers
         let debounce;
         document.getElementById('searchInput').addEventListener('input', () => {
             clearTimeout(debounce);
@@ -980,7 +1397,6 @@
             filterRules();
         };
 
-        // Scroll Handler
         const backToTop = document.getElementById('backToTopBtn');
         window.onscroll = () => {
             if(window.scrollY > 400) {
